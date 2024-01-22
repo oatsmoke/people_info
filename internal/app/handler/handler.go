@@ -2,7 +2,7 @@ package handler
 
 import (
 	"github.com/gin-gonic/gin"
-	"people_info/service"
+	"github.com/oatsmoke/people_info/internal/app/service"
 )
 
 type errorResponse struct {
@@ -26,6 +26,5 @@ func (h *Handler) InitRoutes() *gin.Engine {
 		person.DELETE("/:id", h.deletePerson)
 		person.GET("", h.getPersonByFilters)
 	}
-
 	return router
 }

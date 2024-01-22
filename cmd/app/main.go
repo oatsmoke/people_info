@@ -5,11 +5,13 @@ import (
 	"fmt"
 	"github.com/gofor-little/env"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/oatsmoke/people_info/internal/app/handler"
+	"github.com/oatsmoke/people_info/internal/app/repository"
+	"github.com/oatsmoke/people_info/internal/app/service"
 	"log"
 	"net/http"
-	"people_info/handler"
-	"people_info/repository"
-	"people_info/service"
+	"os"
+	"os/signal"
 )
 
 func main() {
@@ -23,6 +25,9 @@ func main() {
 		log.Fatalf("DB connection initialization error: %s", err.Error())
 		return
 	}
+	defer connectionDB.Close()
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer stop()
 	log.Println("DB connected")
 	repositories := repository.NewRepository(connectionDB)
 	services := service.NewService(repositories)
@@ -32,6 +37,12 @@ func main() {
 		Handler: handlers.InitRoutes(),
 	}
 	log.Println("starting api server")
+	go func() {
+		<-ctx.Done()
+		if err := server.Shutdown(ctx); err != nil {
+			panic(err)
+		}
+	}()
 	if err := server.ListenAndServe(); err != nil {
 		log.Fatalf("server startup error: %s", err.Error())
 		return

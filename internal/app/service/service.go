@@ -1,8 +1,8 @@
 package service
 
 import (
-	"people_info/model"
-	"people_info/repository"
+	"github.com/oatsmoke/people_info/internal/app/model"
+	"github.com/oatsmoke/people_info/internal/app/repository"
 )
 
 type Service struct {

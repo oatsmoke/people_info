@@ -3,10 +3,11 @@ package service
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/oatsmoke/people_info/internal/app/model"
+	"github.com/oatsmoke/people_info/internal/app/repository"
 	"io"
 	"net/http"
-	"people_info/model"
-	"people_info/repository"
+	"sync"
 )
 
 type PersonService struct {
@@ -26,19 +27,17 @@ func NewPersonService(repositoryPeople repository.People) *PersonService {
 }
 
 func (s *PersonService) Create(person model.Person) error {
-	if person.Name == "" || person.Surname == "" {
-		return fmt.Errorf("PersonService Create: incorrect data")
-	}
 	ch := make(chan chData)
-	go age(ch, person.Name)
-	go gender(ch, person.Name)
-	go nationality(ch, person.Name)
-	done := 0
+	wg := sync.WaitGroup{}
+	wg.Add(3)
+	go age(&wg, ch, person.Name)
+	go gender(&wg, ch, person.Name)
+	go nationality(&wg, ch, person.Name)
+	go func(wg *sync.WaitGroup, ch chan chData) {
+		wg.Wait()
+		close(ch)
+	}(&wg, ch)
 	for item := range ch {
-		done++
-		if done == 3 {
-			close(ch)
-		}
 		if item.err != nil {
 			_ = fmt.Errorf("PersonService Create: %s", item.err.Error())
 			continue
@@ -107,7 +106,8 @@ func (s *PersonService) GetPersonByFilters(filters model.Filters) ([]model.Perso
 	return s.repositoryPeople.GetPersonByFilters(str, filters.Limit, filters.Page)
 }
 
-func age(ch chan chData, name string) {
+func age(wg *sync.WaitGroup, ch chan chData, name string) {
+	defer wg.Done()
 	age, err := getData("agify", name)
 	if err != nil {
 		ch <- chData{err: err}
@@ -121,7 +121,8 @@ func age(ch chan chData, name string) {
 	ch <- chData{resource: "agify", result: ageData.Age, err: nil}
 }
 
-func gender(ch chan chData, name string) {
+func gender(wg *sync.WaitGroup, ch chan chData, name string) {
+	defer wg.Done()
 	gender, err := getData("genderize", name)
 	if err != nil {
 		ch <- chData{err: err}
@@ -135,7 +136,8 @@ func gender(ch chan chData, name string) {
 	ch <- chData{resource: "genderize", result: genderData.Gender, err: nil}
 }
 
-func nationality(ch chan chData, name string) {
+func nationality(wg *sync.WaitGroup, ch chan chData, name string) {
+	defer wg.Done()
 	nationality, err := getData("nationalize", name)
 	if err != nil {
 		ch <- chData{err: err}

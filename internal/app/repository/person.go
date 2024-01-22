@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"people_info/model"
+	"github.com/oatsmoke/people_info/internal/app/model"
 )
 
 type PersonRepository struct {
